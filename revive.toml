@@ -1,0 +1,5 @@
+# revive.toml
+
+# Enable custom rules
+[[rule]]
+name = "resource-leak"
