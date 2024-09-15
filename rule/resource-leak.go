@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -56,12 +57,12 @@ func (w lintResourceLeak) checkFunction(fn *ast.FuncDecl) {
 				if call, ok := expr.(*ast.CallExpr); ok {
 					if fun, ok := call.Fun.(*ast.SelectorExpr); ok {
 						if isResourceOpener(fun) {
-							if !hasMatchingDefer(stmt.Pos(), fn) {
+							if !hasMatchingDeferOrDirectClosure(stmt.Pos(), fn) {
 								w.onFailure(lint.Failure{
 									Confidence: 1,
 									Node:       stmt,
 									Category:   "resource-management",
-									Failure:    "resource opened but not closed with defer",
+									Failure:    fmt.Sprintf("check if the resource is closed: %v", w.file.Render(stmt)),
 								})
 							}
 						}
@@ -76,7 +77,7 @@ func (w lintResourceLeak) checkFunction(fn *ast.FuncDecl) {
 func isResourceOpener(fun *ast.SelectorExpr) bool {
 	// openers used by well known packages
 	openers := map[string][]string{
-		"os":      {"Open", "Create"},
+		"os":      {"Open", "Create", "ReadFile", "WriteFile"},
 		"net":     {"Dial", "Listen"},
 		"sql":     {"Open"},
 		"bufio":   {"NewReader", "NewWriter", "NewReadWriter"},
@@ -93,17 +94,16 @@ func isResourceOpener(fun *ast.SelectorExpr) bool {
 			}
 		}
 	}
-	generic_openers := []string{
+	genericOpeners := []string{
 		"init",
 		"open",
 		"start",
-		"read",
 		"dial",
 	}
 
 	// Check if the function's name contains any of the generic openers.
 	methodName := strings.ToLower(fun.Sel.Name)
-	for _, substr := range generic_openers {
+	for _, substr := range genericOpeners {
 		if containsSubstring(methodName, substr) {
 			return true
 		}
@@ -117,14 +117,26 @@ func containsSubstring(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-func hasMatchingDefer(pos token.Pos, fn *ast.FuncDecl) bool {
+func hasMatchingDeferOrDirectClosure(pos token.Pos, fn *ast.FuncDecl) bool {
 	var hasDefer bool
+	var hasDirectClosure bool
+
 	ast.Inspect(fn, func(n ast.Node) bool {
-		if d, ok := n.(*ast.DeferStmt); ok {
-			if d.Pos() > pos {
-				if call, ok := d.Call.Fun.(*ast.SelectorExpr); ok {
-					if call.Sel.Name == "Close" {
+		switch stmt := n.(type) {
+		case *ast.DeferStmt:
+			if stmt.Pos() > pos {
+				if call, ok := stmt.Call.Fun.(*ast.SelectorExpr); ok {
+					if isResourceCloser(call) {
 						hasDefer = true
+						return false
+					}
+				}
+			}
+		case *ast.ExprStmt:
+			if call, ok := stmt.X.(*ast.CallExpr); ok {
+				if fun, ok := call.Fun.(*ast.SelectorExpr); ok {
+					if isResourceCloser(fun) && call.Pos() > pos {
+						hasDirectClosure = true
 						return false
 					}
 				}
@@ -132,5 +144,28 @@ func hasMatchingDefer(pos token.Pos, fn *ast.FuncDecl) bool {
 		}
 		return true
 	})
-	return hasDefer
+
+	return hasDefer || hasDirectClosure
+}
+
+func isResourceCloser(fun *ast.SelectorExpr) bool {
+	// Closers used by well known packages, add closers in same case
+	closers := []string{
+		"close",
+		"stop",
+		"shutdown",
+		"terminate",
+		"abort",
+		"exit",
+		"destroy",
+	}
+
+	if _, ok := fun.X.(*ast.Ident); ok {
+		for _, c := range closers {
+			if strings.ToLower(fun.Sel.Name) == c {
+				return true
+			}
+		}
+	}
+	return false
 }

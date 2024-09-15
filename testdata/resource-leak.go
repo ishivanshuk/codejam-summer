@@ -19,7 +19,7 @@ func fileOpenedAndClosed() error { // OK
 }
 
 func fileOpenedNotClosed() error { 
-	f, err := os.Open("file.txt") // MATCH /resource opened but not closed with defer/
+	f, err := os.Open("file.txt") // MATCH /check if the resource is closed: f, err := os.Open("file.txt")/
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func networkConnOpenedAndClosed() error { // OK
 }
 
 func networkConnOpenedNotClosed() error { 
-	conn, err := net.Dial("tcp", "example.com:80") // MATCH /resource opened but not closed with defer/
+	conn, err := net.Dial("tcp", "example.com:80") // MATCH /check if the resource is closed: conn, err := net.Dial("tcp", "example.com:80")/
 	if err != nil {
 		return err
 	}
@@ -66,9 +66,9 @@ func multipleResourcesOpenedOneNotClosed() error {
 	}
 	defer f.Close()
 
-	f, err := os.ReadFile("file.txt") // MATCH /resource opened but not closed with defer/
+	f, err := os.ReadFile("file.txt") // MATCH /check if the resource is closed: f, err := os.ReadFile("file.txt")/
 
-	conn, err := net.Dial("tcp", "example.com:80") // MATCH /resource opened but not closed with defer/
+	conn, err := net.Dial("tcp", "example.com:80") // MATCH /check if the resource is closed: conn, err := net.Dial("tcp", "example.com:80")/
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func resourceOpenedInNestedFunction() error {
 	var db *sql.DB
 	openDB := func() error {
 		var err error
-		db, err = sql.Open("mysql", "user:password@/dbname") // MATCH /resource opened but not closed with defer/
+		db, err = sql.Open("mysql", "user:password@/dbname") // MATCH /check if the resource is closed: db, err = sql.Open("mysql", "user:password@/dbname")/
 		return err
 	}
 	
@@ -94,14 +94,14 @@ func resourceOpenedInNestedFunction() error {
 }
 
 func resourceOpenedAndClosedWithoutDefer() error {
-	f, err := os.Open("file.txt") // MATCH /resource opened but not closed with defer/
+	f, err := os.Open("file.txt") 
 	if err != nil {
 		return err
 	}
 	
 	// Do something with f
 	
-	f.Close() // Closed, but not with defer
+	f.Close() // Closed, but not with defer, should pass
 	return nil
 }
 
@@ -116,7 +116,7 @@ func resourceOpenedInIfStatementAndClosed() error { // OK
 }
 
 func resourceOpenedInIfStatementNotClosed() error {
-	if f, err := os.Open("file.txt"); err == nil { // MATCH /resource opened but not closed with defer/
+	if f, err := os.Open("file.txt"); err == nil { // MATCH /check if the resource is closed: f, err := os.Open("file.txt")/
 		// Do something with f
 		// Missing defer f.Close()
 	} else {
