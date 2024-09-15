@@ -66,6 +66,8 @@ func multipleResourcesOpenedOneNotClosed() error {
 	}
 	defer f.Close()
 
+	f, err := os.ReadFile("file.txt") // MATCH /resource opened but not closed with defer/
+
 	conn, err := net.Dial("tcp", "example.com:80") // MATCH /resource opened but not closed with defer/
 	if err != nil {
 		return err

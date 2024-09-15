@@ -3,6 +3,7 @@ package rule
 import (
 	"go/ast"
 	"go/token"
+	"strings"
 
 	"github.com/mgechev/revive/lint"
 )
@@ -73,6 +74,7 @@ func (w lintResourceLeak) checkFunction(fn *ast.FuncDecl) {
 }
 
 func isResourceOpener(fun *ast.SelectorExpr) bool {
+	// openers used by well known packages
 	openers := map[string][]string{
 		"os":      {"Open", "Create"},
 		"net":     {"Dial", "Listen"},
@@ -91,7 +93,28 @@ func isResourceOpener(fun *ast.SelectorExpr) bool {
 			}
 		}
 	}
+	generic_openers := []string{
+		"init",
+		"open",
+		"start",
+		"read",
+		"dial",
+	}
+
+	// Check if the function's name contains any of the generic openers.
+	methodName := strings.ToLower(fun.Sel.Name)
+	for _, substr := range generic_openers {
+		if containsSubstring(methodName, substr) {
+			return true
+		}
+	}
+
 	return false
+}
+
+// Helper function to check if a string contains a substring.
+func containsSubstring(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
 
 func hasMatchingDefer(pos token.Pos, fn *ast.FuncDecl) bool {
