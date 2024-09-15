@@ -158,6 +158,7 @@ func isResourceCloser(fun *ast.SelectorExpr) bool {
 		"abort",
 		"exit",
 		"destroy",
+		"finish",
 	}
 
 	if _, ok := fun.X.(*ast.Ident); ok {

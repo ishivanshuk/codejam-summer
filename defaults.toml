@@ -28,3 +28,4 @@ warningCode = 0
 [rule.var-declaration]
 [rule.var-naming]
 [rule.resource-leak]
+[rule.shared-logger]

@@ -18,5 +18,6 @@
 [rule.atomic]
 [rule.empty-lines]
 [rule.resource-leak]
+[rule.shared-logger]
 [rule.line-length-limit]
     arguments = [200]
