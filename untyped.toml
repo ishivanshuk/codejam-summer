@@ -17,5 +17,6 @@
 [rule.waitgroup-by-value]
 [rule.atomic]
 [rule.empty-lines]
+[rule.resource-leak]
 [rule.line-length-limit]
     arguments = [200]

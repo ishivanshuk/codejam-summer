@@ -37,6 +37,7 @@ var defaultRules = []lint.Rule{
 	&rule.UnusedParamRule{},
 	&rule.UnreachableCodeRule{},
 	&rule.RedefinesBuiltinIDRule{},
+	&rule.ResourceLeakRule{},
 }
 
 var allRules = append([]lint.Rule{
